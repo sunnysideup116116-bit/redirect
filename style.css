@@ -86,12 +86,12 @@ body {
 }
 
 /* ============================================================
-   警告圖片區塊 (靜態無動畫)
+   警告圖片區塊 (乾淨去背無邊界陰影)
    ============================================================ */
 .image-wrapper {
   width: 100%;
   max-width: 180px;
-  margin: 0 auto 14px;
+  margin: 0 auto 12px;
 }
 
 .warning-image {
@@ -99,13 +99,14 @@ body {
   height: auto;
   aspect-ratio: 1 / 1;
   object-fit: contain;
-  border-radius: 16px;
-  box-shadow: 0 4px 14px rgba(78, 62, 45, 0.1);
   display: block;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
 }
 
 /* ============================================================
-   倒數計時與資管周提醒區塊 (自適應窄螢幕，絕不超出寬度)
+   倒數計時與專案展提醒區塊 (自適應窄螢幕，絕不超出寬度)
    ============================================================ */
 .countdown-card {
   width: 100%;
