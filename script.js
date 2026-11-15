@@ -1,12 +1,9 @@
 /**
  * 專案轉跳與驗證控制核心邏輯
  *
- * 包含：
- * 1. 台灣時間 (UTC+8) 自動判定與倒數計時（目標開放時間：11/26 08:30）
- * 2. 伺服器時間校驗（防範使用者手動竄改本機系統時鐘）
- * 3. 閉包封裝（IIFE，防止透過 F12 Console 全域變數直接呼叫）
- * 4. 密碼雜湊防篡改比對 (非明文保存)
- * 5. 目標 URL 混淆加密防 F12 搜尋
+ * 流程：
+ * - 時間已到（11/26 08:30 後）→ 直接顯示選擇畫面（App / 網頁版）
+ * - 時間未到 → 顯示倒數與密碼畫面 → 密碼正確後進入選擇畫面
  */
 
 (() => {
@@ -20,23 +17,36 @@
     "1bec026ad7b921c876e44e89dd076cd90aab9665e0cd0b38512d137982acbd3b";
 
   // ============================================================
-  // 2. 目標 URL 動態解密 (封裝於閉包內，F12 Console 無法直接讀取)
+  // 2. 目標 URL 動態解密（兩組加密連結，封裝於閉包內）
   // ============================================================
-  function _getDestinationUrl() {
-    const _payload =
-      "KAkcFjt+cX9SYUJTHWpsfHubi47K/fzMr7vo2cCe0PHc96Q0CQgTFjo6PmMXQ2FQQw5nb2OekqCPiZK787m/wcGIjJGvzQ==";
-    const _salt = [
-      77, 105, 115, 68, 97, 116, 105, 110, 103, 65, 112, 112, 82, 101, 108, 101,
-      97, 115, 101, 50, 48, 50, 54,
-    ];
-    const _bin = atob(_payload);
-    let _result = "";
-    for (let i = 0; i < _bin.length; i++) {
-      _result += String.fromCharCode(
-        _bin.charCodeAt(i) ^ _salt[i % _salt.length] ^ ((i * 7 + 13) % 256),
+  const _SALT = [
+    77, 105, 115, 68, 97, 116, 105, 110, 103, 65, 112, 112, 82, 101, 108, 101,
+    97, 115, 101, 50, 48, 50, 54,
+  ];
+
+  function _decrypt(payload) {
+    const bin = atob(payload);
+    let out = "";
+    for (let i = 0; i < bin.length; i++) {
+      out += String.fromCharCode(
+        bin.charCodeAt(i) ^ _SALT[i % _SALT.length] ^ ((i * 7 + 13) % 256),
       );
     }
-    return _result;
+    return out;
+  }
+
+  // Google Play 商店連結（加密）
+  function _getAppUrl() {
+    return _decrypt(
+      "KAkcFjt+cX9SYUJTHWpsfHubi47K/fzMr7vo2cCe0PHc96Q0CQgTFjo6PmMXQ2FQQw5nb2OekqCPiZK787m/wcGIjJGvzQ==",
+    );
+  }
+
+  // 網頁版連結（加密）
+  function _getWebUrl() {
+    return _decrypt(
+      "KAkcFjt+cX9ReE1ESn5qd3mCnpGYpKDS6uLlwtGf1ujY7P4yQhUdUDIodWMdGS9eXlAndnGJhbw=",
+    );
   }
 
   // ============================================================
@@ -136,7 +146,6 @@
 
   async function syncServerTime() {
     try {
-      // 透過向伺服器發送輕量 HEAD 請求取得真實 HTTP Date 標頭
       const resp = await fetch(window.location.href, {
         method: "HEAD",
         cache: "no-store",
@@ -156,11 +165,24 @@
   // ============================================================
   document.addEventListener("DOMContentLoaded", async () => {
     const lockState = document.getElementById("lockState");
+    const choiceState = document.getElementById("choiceState");
     const redirectState = document.getElementById("redirectState");
+    const redirectDesc = document.getElementById("redirectDesc");
     const passwordForm = document.getElementById("passwordForm");
     const passwordInput = document.getElementById("passwordInput");
     const errorMessage = document.getElementById("errorMessage");
     const submitBtn = document.getElementById("submitBtn");
+    const btnApp = document.getElementById("btnApp");
+    const btnWeb = document.getElementById("btnWeb");
+    const lockImage = document.getElementById("lockImage");
+    const blockImage = document.getElementById("blockImage");
+    const countdownCard = document.getElementById("countdownCard");
+    const lockHeaderGroup = document.getElementById("lockHeaderGroup");
+    const blockedMsg = document.getElementById("blockedMsg");
+
+    // 錯誤次數計數（靜默計數，不提示剩餘次數）
+    let wrongCount = 0;
+    const MAX_WRONG = 3;
 
     // 倒數計時元素
     const cdDays = document.getElementById("cdDays");
@@ -171,20 +193,38 @@
     const unlockTimestamp = new Date(UNLOCK_TIME_ISO).getTime();
     let countdownTimerId = null;
 
-    // 執行轉跳
-    function executeRedirect(delayMs = 400) {
+    // 顯示選擇畫面
+    function showChoiceState() {
       if (countdownTimerId) {
         clearInterval(countdownTimerId);
         countdownTimerId = null;
       }
       lockState.classList.add("hidden");
+      redirectState.classList.add("hidden");
+      choiceState.classList.remove("hidden");
+    }
+
+    // 執行轉跳到指定目標
+    function navigateTo(urlGetter, description) {
+      choiceState.classList.add("hidden");
+      lockState.classList.add("hidden");
       redirectState.classList.remove("hidden");
+      redirectDesc.textContent = description;
 
       setTimeout(() => {
-        const target = _getDestinationUrl();
+        const target = urlGetter();
         window.location.replace(target);
-      }, delayMs);
+      }, 400);
     }
+
+    // 綁定選擇按鈕事件
+    btnApp.addEventListener("click", () => {
+      navigateTo(_getAppUrl, "即將為您導向 Google Play 商店...");
+    });
+
+    btnWeb.addEventListener("click", () => {
+      navigateTo(_getWebUrl, "即將為您導向網頁版...");
+    });
 
     // 更新倒數畫面
     function updateCountdown() {
@@ -192,7 +232,7 @@
       const remaining = unlockTimestamp - now;
 
       if (remaining <= 0) {
-        executeRedirect(0);
+        showChoiceState();
         return;
       }
 
@@ -207,13 +247,18 @@
       if (cdSeconds) cdSeconds.textContent = String(seconds).padStart(2, "0");
     }
 
-    // 啟動本機初始倒數
-    updateCountdown();
-    countdownTimerId = setInterval(updateCountdown, 1000);
+    // 檢查是否已達開放時間
+    if (getEstimatedTime() >= unlockTimestamp) {
+      showChoiceState();
+    } else {
+      // 啟動倒數
+      updateCountdown();
+      countdownTimerId = setInterval(updateCountdown, 1000);
 
-    // 非同步進行伺服器時間校正（防止使用者手動修改電腦時間）
-    await syncServerTime();
-    updateCountdown();
+      // 非同步伺服器時間校正
+      await syncServerTime();
+      updateCountdown();
+    }
 
     // 顯示錯誤訊息
     function showError(msg) {
@@ -229,7 +274,22 @@
       errorMessage.classList.remove("visible");
     }
 
-    // 表單驗證提交
+    // 觸發封鎖畫面（連錯 3 次）——DOM 雙圖切換，零載入延遲
+    function triggerBlock() {
+      if (countdownTimerId) {
+        clearInterval(countdownTimerId);
+        countdownTimerId = null;
+      }
+      // 瞬間隱藏 Warning 圖，顯示預先載入的 Block 圖
+      if (lockImage) lockImage.classList.add("hidden");
+      if (blockImage) blockImage.classList.remove("hidden");
+      countdownCard.style.display = "none";
+      lockHeaderGroup.style.display = "none";
+      passwordForm.style.display = "none";
+      blockedMsg.classList.remove("hidden");
+    }
+
+    // 表單驗證提交 → 密碼正確則進入選擇畫面
     passwordForm.addEventListener("submit", (e) => {
       e.preventDefault();
       clearError();
@@ -240,17 +300,21 @@
         return;
       }
 
-      // 計算輸入內容的 SHA-256 雜湊值進行比對
       const hashedInput = computeSha256(userInput);
 
       if (hashedInput === AUTH_PASSWORD_HASH) {
-        // 驗證成功
         submitBtn.disabled = true;
         submitBtn.innerHTML = `<span>驗證成功...</span>`;
-        executeRedirect(300);
+        setTimeout(() => {
+          showChoiceState();
+        }, 300);
       } else {
-        // 驗證失敗
-        showError("密碼錯誤！請重新確認");
+        wrongCount++;
+        if (wrongCount >= MAX_WRONG) {
+          triggerBlock();
+        } else {
+          showError("密碼錯誤！請重新確認");
+        }
       }
     });
 
@@ -261,9 +325,21 @@
       }
     });
 
-    // 自動對焦
-    setTimeout(() => {
-      passwordInput.focus();
-    }, 100);
+    // 禁用右鍵選單
+    document.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+    });
+
+    // 禁用圖片與元素拖移
+    document.addEventListener("dragstart", (e) => {
+      e.preventDefault();
+    });
+
+    // 自動對焦（僅在鎖定畫面可見時）
+    if (!lockState.classList.contains("hidden")) {
+      setTimeout(() => {
+        passwordInput.focus();
+      }, 100);
+    }
   });
 })();

@@ -36,6 +36,28 @@
   margin: 0;
   padding: 0;
   -webkit-tap-highlight-color: transparent;
+  /* 禁用文字選取 */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* 保持輸入框可以正常編輯 */
+input {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* 禁用圖片拖移 */
+img {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
 }
 
 body {
@@ -73,7 +95,7 @@ body {
   text-align: center;
 }
 
-/* 狀態容器切換 */
+/* 狀態容器切換與通用隱藏樣式 */
 .state-container {
   display: flex;
   flex-direction: column;
@@ -81,12 +103,16 @@ body {
   width: 100%;
 }
 
+.hidden {
+  display: none !important;
+}
+
 .state-container.hidden {
   display: none !important;
 }
 
 /* ============================================================
-   警告圖片區塊 (乾淨去背無邊界陰影)
+   圖片區塊 (乾淨去背無邊界陰影)
    ============================================================ */
 .image-wrapper {
   width: 100%;
@@ -293,6 +319,66 @@ body {
 }
 
 /* ============================================================
+   選擇版本按鈕區塊
+   ============================================================ */
+.choice-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 14px;
+}
+
+.choice-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 50px;
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.choice-btn-primary {
+  background-color: var(--primary-btn-bg);
+  color: var(--primary-btn-text);
+  box-shadow: 0 2px 6px rgba(74, 59, 50, 0.2);
+}
+
+.choice-btn-secondary {
+  background-color: transparent;
+  color: var(--primary-btn-bg);
+  border: 1.5px solid var(--input-border);
+}
+
+.choice-hint {
+  font-size: 0.82rem;
+  color: var(--notice-text);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* ============================================================
+   封鎖訊息（連續錯誤 3 次後顯示）
+   ============================================================ */
+.blocked-message {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-prompt);
+  line-height: 1.6;
+  text-align: center;
+  padding: 4px 0 8px;
+}
+
+.blocked-message.hidden {
+  display: none;
+}
+
+/* ============================================================
    錯誤提示訊息
    ============================================================ */
 .error-feedback {
@@ -379,6 +465,11 @@ body {
 
   .subtitle {
     font-size: 0.88rem;
+  }
+
+  .choice-btn {
+    height: 46px;
+    font-size: 0.92rem;
   }
 }
 

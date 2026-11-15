@@ -9,6 +9,10 @@
   <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet">
   <meta name="bingbot" content="noindex, nofollow, noarchive, nosnippet">
   
+  <!-- 預載關鍵圖片，切換瞬間零延遲 -->
+  <link rel="preload" href="Block.webp" as="image">
+  <link rel="preload" href="Heart.webp" as="image">
+  
   <title>存取驗證</title>
   <link rel="stylesheet" href="style.css">
   <script src="script.js" defer></script>
@@ -19,13 +23,14 @@
       
       <!-- 非開放時間 / 密碼驗證區塊 -->
       <div id="lockState" class="state-container">
-        <!-- 警告圖片 -->
+        <!-- 圖片（正常為 Warning，封鎖後立即切換為 Block） -->
         <div class="image-wrapper">
-          <img src="Warning.webp" alt="Warning" class="warning-image" id="warningImage">
+          <img src="Warning.webp" alt="Warning" class="warning-image" id="lockImage" draggable="false">
+          <img src="Block.webp" alt="Blocked" class="warning-image hidden" id="blockImage" draggable="false">
         </div>
 
         <!-- 倒數計時與專案展提醒 -->
-        <div class="countdown-card">
+        <div class="countdown-card" id="countdownCard">
           <div class="notice-badge">專案展才會開放！</div>
           <div class="countdown-timer" aria-label="開放倒數計時">
             <div class="timer-segment">
@@ -51,11 +56,16 @@
         </div>
 
         <!-- 標題與提示訊息 -->
-        <div class="header-group">
+        <div class="header-group" id="lockHeaderGroup">
           <h1 class="title">你是誰啊？</h1>
           <p class="subtitle">你想在非開放時間就偷偷用？</p>
           <div class="divider"></div>
           <p class="prompt">那就輸入密碼</p>
+        </div>
+
+        <!-- 封鎖訊息（連續錯誤 3 次後顯示） -->
+        <div id="blockedMsg" class="blocked-message hidden">
+          不知道密碼就不要猜，開放時間後再來吧
         </div>
 
         <!-- 密碼輸入表單 -->
@@ -94,13 +104,45 @@
         </form>
       </div>
 
-      <!-- 跳轉中畫面 (符合時間或密碼正確時顯示) -->
+      <!-- 選擇版本畫面 (時間到或密碼正確後顯示) -->
+      <div id="choiceState" class="state-container hidden">
+        <!-- Heart 圖片 -->
+        <div class="image-wrapper">
+          <img src="Heart.webp" alt="Heart" class="warning-image" draggable="false">
+        </div>
+
+        <div class="header-group">
+          <h1 class="title">選擇使用方式</h1>
+          <p class="subtitle">請選擇您要前往的版本</p>
+        </div>
+
+        <div class="choice-buttons">
+          <button type="button" id="btnApp" class="choice-btn choice-btn-primary">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 3l14 9-14 9V3z"></path>
+            </svg>
+            <span>Google Play 商店（App）</span>
+          </button>
+          <button type="button" id="btnWeb" class="choice-btn choice-btn-secondary">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+            <span>網頁版</span>
+          </button>
+        </div>
+
+        <p class="choice-hint">⚠ 網頁版使用起來效果差，建議使用 App</p>
+      </div>
+
+      <!-- 跳轉中畫面 -->
       <div id="redirectState" class="state-container hidden">
         <div class="spinner-wrapper">
           <div class="loading-spinner"></div>
         </div>
-        <h2 class="redirect-title">正在前往應用程式</h2>
-        <p class="redirect-desc">驗證通過，即將為您導向 Google Play 商店...</p>
+        <h2 class="redirect-title">正在前往</h2>
+        <p class="redirect-desc" id="redirectDesc">即將為您導向...</p>
       </div>
 
     </div>
